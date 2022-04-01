@@ -6,6 +6,12 @@
 #include <unordered_map>
 #include <queue>
 #include <iostream>
+
+std::unordered_map<int, std::string> colorMap = {
+    {0, "(b)"},
+    {1, "(r)"}
+};
+
 template <typename T>
 class rbTree{
 public:
@@ -59,12 +65,21 @@ void rbTree<T>::InsertNode(T val) {
         rootNode->color_tag = 0;
         return;
     }
-    while (tempNode != nullptr) {
+    while (tempNode->data != -1) {
         if (val > tempNode->data) {
-            if (tempNode->rightChild == nullptr) {
+            if (tempNode->rightChild->data == -1) {
+                delete tempNode->rightChild;
                 tempNode->rightChild = new rbTreeNode<T>(val);
                 tempNode->rightChild->color_tag = 1;
                 tempNode->rightChild->fatherNode = tempNode;
+                tempNode->rightChild->leftChild = new rbTreeNode<T>(-1);
+                tempNode->rightChild->leftChild->fatherNode = tempNode->rightChild;
+                tempNode->rightChild->leftChild->color_tag = 0;
+
+                tempNode->rightChild->rightChild = new rbTreeNode<T>(-1);
+                tempNode->rightChild->rightChild->fatherNode = tempNode->rightChild;
+                tempNode->rightChild->rightChild->color_tag = 0;
+
                 if (tempNode->color_tag == 1) {
                     fixTree(tempNode->rightChild);
                 }
@@ -73,10 +88,20 @@ void rbTree<T>::InsertNode(T val) {
                 tempNode = tempNode->rightChild;
             }
         } else {
-            if (tempNode->leftChild == nullptr) {
+            if (tempNode->leftChild->data == -1) {
+                delete tempNode->leftChild;
                 tempNode->leftChild = new rbTreeNode<T>(val);
                 tempNode->leftChild->color_tag = 1;
                 tempNode->leftChild->fatherNode = tempNode;
+
+                tempNode->leftChild->leftChild = new rbTreeNode<T>(-1);
+                tempNode->leftChild->leftChild->fatherNode = tempNode->leftChild;
+                tempNode->leftChild->leftChild->color_tag = 0;
+
+                tempNode->leftChild->rightChild = new rbTreeNode<T>(-1);
+                tempNode->leftChild->rightChild->fatherNode = tempNode->leftChild;
+                tempNode->leftChild->rightChild->color_tag = 0;
+
                 if (tempNode->color_tag == 1) {
                     fixTree(tempNode->leftChild);
                 } 
@@ -91,7 +116,7 @@ void rbTree<T>::InsertNode(T val) {
 template <typename T>
 int rbTree<T>::deleteNode(T valDelete) {
     rbTreeNode<T> *tempNode = rootNode;
-    while (tempNode->data != valDelete && tempNode != nullptr) {
+    while (tempNode->data != valDelete && tempNode->data != -1) {
         if (valDelete > tempNode->data) {
             tempNode = tempNode->rightChild;
         } else {
@@ -99,15 +124,27 @@ int rbTree<T>::deleteNode(T valDelete) {
         }
     }
     // not find the val to delete
-    if (!tempNode) {
+    if (tempNode->data == -1) {
         return -1;
     }
     int colorTag = tempNode->color_tag;
     rbTreeNode<T> *fixPos = nullptr;
-    if (tempNode->leftChild == nullptr && tempNode->rightChild == nullptr) {
+    if (tempNode->leftChild->data == -1 && tempNode->rightChild->data == -1) {
+        if (tempNode = tempNode->fatherNode->leftChild) {
+            tempNode->fatherNode->leftChild = new rbTreeNode<T>(-1);
+            tempNode->fatherNode->leftChild->fatherNode = tempNode->fatherNode;
+            tempNode->fatherNode->leftChild->color_tag = 0;
+        } else {
+            tempNode->fatherNode->rightChild = new rbTreeNode<T>(-1);
+            tempNode->fatherNode->rightChild->fatherNode = tempNode->fatherNode;
+            tempNode->fatherNode->rightChild->color_tag = 0;            
+        }
+        delete tempNode->leftChild;
+        delete tempNode->rightChild;
         delete tempNode;
+
         return 1;
-    } else if (tempNode->leftChild == nullptr && tempNode->rightChild != nullptr) {
+    } else if (tempNode->leftChild->data == -1 && tempNode->rightChild->data != -1) {
         fixPos = tempNode->rightChild;
         if (tempNode != rootNode) {
             if (tempNode->fatherNode->leftChild == tempNode) {
@@ -121,7 +158,9 @@ int rbTree<T>::deleteNode(T valDelete) {
             rootNode = tempNode->rightChild;
             tempNode->rightChild->fatherNode = nullptr;
         }
-    } else if (tempNode->leftChild != nullptr && tempNode->rightChild == nullptr) {
+        delete tempNode->leftChild;
+        delete tempNode;
+    } else if (tempNode->leftChild->data != -1 && tempNode->rightChild->data == -1) {
         fixPos = tempNode->leftChild;
         if (tempNode != rootNode) {
             if (tempNode->fatherNode->leftChild == tempNode) {
@@ -135,7 +174,9 @@ int rbTree<T>::deleteNode(T valDelete) {
             rootNode = tempNode->leftChild;
             tempNode->leftChild->fatherNode = nullptr;
         }
-    } else if (tempNode->leftChild != nullptr && tempNode->rightChild != nullptr) {
+        delete tempNode->rightChild;
+        delete tempNode;    
+    } else if (tempNode->leftChild->data != -1 && tempNode->rightChild->data != -1) {
         
         if (tempNode != rootNode) {
             rbTreeNode<T> *succNode = findSuccessorNode(tempNode);
@@ -146,19 +187,23 @@ int rbTree<T>::deleteNode(T valDelete) {
                 if (tempNode == tempNode->fatherNode->leftChild) {
                     tempNode->fatherNode->leftChild = succNode;
 
+                    delete succNode->leftChild;
                     succNode->leftChild = tempNode->leftChild;
                     succNode->leftChild->fatherNode = succNode;
 
                     succNode->fatherNode = tempNode->fatherNode;
                     succNode->color_tag = tempNode->color_tag;
+                    delete tempNode;
                 } else {
                     tempNode->fatherNode->rightChild = succNode;
 
+                    delete succNode->leftChild;
                     succNode->leftChild = tempNode->leftChild;
                     succNode->leftChild->fatherNode = succNode;
 
                     succNode->fatherNode = tempNode->fatherNode;
                     succNode->color_tag = tempNode->color_tag;
+                    delete tempNode;
                 }
             } else {
                 if (succNode->rightChild) {
@@ -171,22 +216,26 @@ int rbTree<T>::deleteNode(T valDelete) {
                     succNode->rightChild = tempNode->rightChild;
                     succNode->rightChild->fatherNode = succNode;
 
+                    delete succNode->leftChild;
                     succNode->leftChild = tempNode->leftChild;
                     succNode->leftChild->fatherNode = succNode;
 
                     succNode->fatherNode = tempNode->fatherNode;
                     succNode->color_tag = tempNode->color_tag;
+                    delete tempNode;
                 } else {
                     tempNode->fatherNode->rightChild = succNode;
 
                     succNode->rightChild = tempNode->rightChild;
                     succNode->rightChild->fatherNode = succNode;
 
+                    delete succNode->leftChild;
                     succNode->leftChild = tempNode->leftChild;
                     succNode->leftChild->fatherNode = succNode;
 
                     succNode->fatherNode = tempNode->fatherNode;
                     succNode->color_tag = tempNode->color_tag;
+                    delete tempNode;
                 }
             }
             
@@ -196,18 +245,21 @@ int rbTree<T>::deleteNode(T valDelete) {
             colorTag = succNode->color_tag;
 
             if (succNode->fatherNode == tempNode) { 
+                delete succNode->leftChild;
                 succNode->leftChild = tempNode->leftChild;
                 succNode->leftChild->fatherNode = succNode;
 
                 succNode->fatherNode = nullptr;
                 rootNode = succNode;
 
-                succNode->color_tag = tempNode->color_tag;     
+                succNode->color_tag = tempNode->color_tag;  
+                delete tempNode;   
             } else {
                 if (succNode->rightChild) {
                     succNode->fatherNode->leftChild = succNode->rightChild;
                     succNode->rightChild->fatherNode = succNode->fatherNode;
                 }    
+                delete succNode->leftChild;
                 succNode->leftChild = tempNode->leftChild;
                 succNode->leftChild->fatherNode = succNode;
 
@@ -216,8 +268,8 @@ int rbTree<T>::deleteNode(T valDelete) {
 
                 succNode->fatherNode = nullptr;
                 rootNode = succNode;
-
                 succNode->color_tag = tempNode->color_tag; 
+                delete tempNode;
             }       
         }
   
@@ -238,12 +290,14 @@ void rbTree<T>::fixTree(rbTreeNode<T> *curNode) {
         grandFatherNode = tempCurNode->fatherNode->fatherNode;
         if (tempCurNode->fatherNode == grandFatherNode->leftChild) {
             uncleNode = grandFatherNode->rightChild;
+            // uncle node exist and is red
             if (uncleNode && uncleNode->color_tag == 1) {
                 tempCurNode->fatherNode->color_tag = 0;
                 uncleNode->color_tag = 0;
                 grandFatherNode->color_tag = 1;
                 tempCurNode = grandFatherNode;
-            } else {
+            } else { // uncle node does not exist
+                // left -> right 
                 if (tempCurNode == tempCurNode->fatherNode->rightChild) {
                     tempCurNode = tempCurNode->fatherNode;
                     leftRotate(tempCurNode);
@@ -271,36 +325,6 @@ void rbTree<T>::fixTree(rbTreeNode<T> *curNode) {
         }
     }
     rootNode->color_tag = 0;
-    // while (true) {
-    //     if (tempCurNode->fatherNode == nullptr) {
-    //         break;
-    //     }
-    //     if (tempCurNode->fatherNode->color_tag == 1) {
-    //         break;
-    //     }
-    //     rbTreeNode<T> *fatherNode = tempCurNode->fatherNode;
-    //     rbTreeNode<T> *grandFatherNode = fatherNode->fatherNode;
-    //     if (grandFatherNode) {
-    //         if (fatherNode == grandFatherNode->leftChild) {
-    //             uncleNode = grandFatherNode->rightChild;
-    //             if (uncleNode) {
-    //                 // sitution 1 father and uncle is red, recoler them and grandfather(only when grandfather is not root)
-    //                 if (uncleNode->color_tag == 1) {
-    //                     uncleNode->color_tag = 0;
-    //                     fatherNode->color_tag = 0;
-    //                     if (grandFatherNode != rootNode) {
-    //                         grandFatherNode = 1;
-    //                     } else {
-    //                         break;
-    //                     }
-    //                     tempCurNode = grandFatherNode;
-    //                 }
-    //             } else if (tempCurNode == fatherNode->rightChild) {
-    //                 // 叔叔是黑色节点，当前节点为右孩子，左旋，父节点作为当前节点
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 template <typename T>
@@ -308,22 +332,26 @@ void rbTree<T>::fixTreeDelete(rbTreeNode<T>* curNode) {
     while (curNode != rootNode && curNode->color_tag == 0) {
         if (curNode == curNode->fatherNode->leftChild) {
             rbTreeNode<T> *brotherNode = curNode->fatherNode->rightChild;
+            // situation 1, brother is red
             if (brotherNode->color_tag == 1) {
                 brotherNode->color_tag = 0;
                 curNode->fatherNode->color_tag = 1;
                 leftRotate(curNode->fatherNode);
                 brotherNode = curNode->fatherNode->rightChild;
             }
+            // situation 2
             if (brotherNode->leftChild->color_tag == 0 && brotherNode->rightChild->color_tag == 0) {
                 brotherNode->color_tag = 1;
                 curNode = curNode->fatherNode;
                 continue;
             } else if (brotherNode->rightChild->color_tag == 0) { // brother's right is black
+                // situation 3
                 brotherNode->leftChild->color_tag = 0;
                 brotherNode->color_tag = 1;
                 rightRotate(brotherNode);
                 brotherNode = curNode->fatherNode->rightChild;
             }
+            // situation 4
             brotherNode->color_tag = curNode->fatherNode->color_tag;
             curNode->fatherNode->color_tag = 0;
             brotherNode->rightChild->color_tag = 0;
@@ -400,7 +428,7 @@ void rbTree<T>::rightRotate(rbTreeNode<T> *curNode) {
 template <typename T>
 rbTreeNode<T>* rbTree<T>::findSuccessorNode(rbTreeNode<T>* curNode) {
     rbTreeNode<T> *tempNode = curNode->rightChild;
-    while (tempNode->leftChild != nullptr) {
+    while (tempNode->leftChild->data != -1) {
         tempNode = tempNode->leftChild;
     }
     return tempNode;
@@ -434,7 +462,7 @@ void rbTree<T>::print() {
     std::unordered_map<rbTreeNode<T>*, int> first_locations;
     for (auto &i : intv) {
         location = template_str.size();
-        template_str += std::to_string(i->data) + " ";
+        template_str += std::to_string(i->data) + colorMap[i->color_tag] + "  ";
         first_locations[i] = location;
     }
     for (auto &i : template_str) i = ' ';
@@ -448,7 +476,7 @@ void rbTree<T>::print() {
             auto node = q.front();
             q.pop();
             cur_loc = first_locations[node];
-            std::string num_str = std::to_string(node->data);
+            std::string num_str = std::to_string(node->data) + colorMap[node->color_tag];
             //左边，如果存在左孩子，那么在第二行对应位置打印'/'，在第一行补上'_'
             if (node->leftChild) {
                 q.push(node->leftChild);
